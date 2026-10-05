@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR01",
+  "commit": "49eb4b52e60a50861cb9692078c62e19112fc324",
+  "course_kit": {
+    "version": "v1-w05",
+    "archive_sha256": "bca214e3de6f90f9513049dfa0f36fee65ad834da502dc3f3f8fb443517b5197"
+  },
+  "commands": [
+    "source /opt/ros/lyrical/setup.bash",
+    "export ROS_DOMAIN_ID=128",
+    "ros2 run turtlesim turtlesim_node",
+    "ros2 run turtlesim turtle_teleop_key",
+    "ros2 node list --no-daemon --spin-time 2",
+    "ros2 topic list --no-daemon -t",
+    "ros2 node info --no-daemon /turtlesim",
+    "ros2 topic type --no-daemon /turtle1/pose",
+    "timeout 5s ros2 topic echo --no-daemon /turtle1/pose turtlesim_msgs/msg/Pose --once",
+    "time timeout 10s ros2 topic hz /turtle1/pose",
+    "export ROS_DOMAIN_ID=129; timeout 5s ros2 topic echo --no-daemon /turtle1/pose turtlesim_msgs/msg/Pose --once",
+    "export ROS_DOMAIN_ID=128; timeout 5s ros2 topic echo --no-daemon /turtle1/pose turtlesim_msgs/msg/Pose --once"
+  ],
+  "tests": [
+    {
+      "name": "node discovery в домене 128: видны /turtlesim и /teleop_turtle",
+      "status": "passed"},
+    {
+      "name": "тип топика /turtle1/pose разрешается в turtlesim_msgs/msg/Pose",
+      "status": "passed"},
+    {
+      "name": "поза приходит: ros2 topic echo /turtle1/pose --once (exit=0)",
+      "status": "passed"},
+    {
+      "name": "частота /turtle1/pose ≈ 62.5 Гц за 10.6 c (таймер 16 мс)",
+      "status": "passed"},
+    {
+      "name": "дефект: в домене 129 поза не приходит, exit=124",
+      "status": "passed"},
+    {
+      "name": "исправление: в домене 128 поза снова приходит, exit=0",
+      "status": "passed"}
+  ],
+  "defect": {
+    "reproducer": "export ROS_DOMAIN_ID=129; timeout 5s ros2 topic echo --no-daemon /turtle1/pose turtlesim_msgs/msg/Pose --once > evidence/pr01/pose-broken.txt 2>&1; printf 'exit=%s\\n' $? — наблюдение: ros2 node list --no-daemon показывает только /teleop_turtle (без /turtlesim), данные позы не поступают, exit=124 (истечение таймаута 5 с), стрелки teleop не двигают черепаху.",
+    "root_cause": "ROS_DOMAIN_ID задаёт область обнаружения участников DDS (discovery). Подписчик (CLI в домене 129) и издатель /turtlesim (домен 128) находятся в разных доменах и не обнаруживают друг друга. Значение домена применяется при запуске процесса, поэтому export не перенастраивает уже запущенную ноду: подписчика пришлось перезапустить в новом домене, а симулятор, работающий в домене 128, и установку ROS менять не потребовалось.",
+    "proof_after": "export ROS_DOMAIN_ID=128; timeout 5s ros2 topic echo --no-daemon /turtle1/pose turtlesim_msgs/msg/Pose --once > evidence/pr01/pose-fixed.txt 2>&1; printf 'exit=%s\\n' $? — наблюдение: ros2 node list --no-daemon видит /turtlesim и /teleop_turtle, в pose-fixed.txt приходят x/y/theta (например theta=2.016), exit=0, стрелки снова двигают черепаху."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 2,
+    "self_study_hours": 2
+  },
+  "ai_used": true
+}
