@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 from ament_mypy.main import main
+
 import pytest
 
 
 @pytest.mark.mypy
 @pytest.mark.linter
 def test_mypy() -> None:
-    rc = main(argv=[])
+    rc = main(argv=[str(Path(__file__).resolve().parents[1])])
     assert rc == 0, 'Found type errors!'

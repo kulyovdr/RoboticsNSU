@@ -7,3 +7,5 @@ __pycache__/
 robotics-course-kit-*
 .kilo
 /doctor.txt
+.vscode
+/ty.toml
