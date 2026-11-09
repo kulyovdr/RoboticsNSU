@@ -1,0 +1,11 @@
+{
+    "run_mode": "native",
+    "os": "Ubuntu 26.04.1 LTS",
+    "ros_distro": "lyrical",
+    "gazebo_version": "10.5.0",
+    "rmw": "rmw_fastrtps_cpp",
+    "experiment_domains": {
+        "working": 128,
+        "broken": 129
+    }
+}

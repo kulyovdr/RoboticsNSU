@@ -1,0 +1,42 @@
+name: PR03 — нода patrol и evidence
+
+on: [push, pull_request]
+
+jobs:
+  pr03-build:
+    name: PR03 — сборка и тесты patrol
+    runs-on: ubuntu-latest
+    container:
+      image: ros:lyrical
+    timeout-minutes: 15
+    env:
+      COURSE_KIT_URL: https://ros.lms.ci.nsu.ru/downloads/robotics-course-kit-v1-w10-7a91d388d7bd.tar.gz
+      COURSE_KIT_SHA256: 7a91d388d7bd3def7e058c8da48c32ff27ea6f14dc880a2da169c4102d456874
+    steps:
+      - name: Получить всю историю коммитов
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Установить недостающие ROS-пакеты
+        shell: bash
+        run: apt-get update -qq && apt-get install -y -qq ros-lyrical-turtlesim-msgs
+      - name: Собрать PR03
+        shell: bash
+        run: |
+          set -o pipefail
+          source /opt/ros/lyrical/setup.bash
+          colcon build --symlink-install --packages-select patrol turtle_bringup
+          source install/setup.bash
+          ros2 pkg prefix patrol
+          ros2 pkg executables patrol
+          python3 -m pytest src/patrol/test
+      - name: Скачать зафиксированный комплект курса
+        shell: bash
+        run: |
+          curl -fsSLo /tmp/course-kit.tar.gz "$COURSE_KIT_URL"
+          printf '%s  %s\n' "$COURSE_KIT_SHA256" /tmp/course-kit.tar.gz | sha256sum -c -
+          mkdir -p .course-kit
+          tar -xzf /tmp/course-kit.tar.gz -C .course-kit
+      - name: Проверить комплектность evidence PR03
+        shell: bash
+        run: python3 .course-kit/v1/tools/check_practice.py PR03 --submission .
