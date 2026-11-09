@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "practice_id": "PR03",
+  "commit": "9888e809f8ebc6922c5ffc1c768534d581877dca",
+  "course_kit": {
+    "version": "v1-w10",
+    "archive_sha256": "7a91d388d7bd3def7e058c8da48c32ff27ea6f14dc880a2da169c4102d456874"
+  },
+  "commands": [
+    "ros2 pkg create --build-type ament_python --node-name patrol patrol --dependencies rclpy geometry_msgs",
+    "colcon build --symlink-install --packages-select patrol",
+    "source install/setup.bash",
+    "python3 -m pytest src/patrol/test",
+    "ros2 launch turtle_bringup sim.launch.py",
+    "ros2 run patrol patrol",
+    "ros2 node list --no-daemon --spin-time 2",
+    "ros2 topic info /cmd_vel --verbose",
+    "ros2 topic info /turtle1/cmd_vel --verbose",
+    "ros2 topic echo /turtle1/pose --once",
+    "ros2 run patrol patrol --ros-args -r cmd_vel:=/turtle1/cmd_vel",
+    "timeout 10 ros2 topic hz /turtle1/cmd_vel"
+  ],
+  "tests": [
+    {
+      "name": "сборка пакета patrol (colcon build Finished)",
+      "status": "passed"
+    },
+    {
+      "name": "нода появляется в графе: /patrol в ros2 node list (nodes.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "чистая функция choose_cmd: поза=None -> нулевой Twist; поза есть -> 0.5/0.3 (pytest, tests.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "линты пакета: flake8, mypy, pep257, xmllint (tests.txt: 6 passed, 1 skipped)",
+      "status": "passed"
+    },
+    {
+      "name": "дефект: издатель в /cmd_vel, подписчиков 0, поза не меняется при работающем издателе (info-broken.txt, pose-start.txt, pose-after-wrong.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "исправление: -r cmd_vel:=/turtle1/cmd_vel — издатель и подписчик соединены, черепаха движется (info-fixed.txt, pose-run1/2.txt)",
+      "status": "passed"
+    },
+    {
+      "name": "частота команд: ros2 topic hz за 10 с = 10.000 Гц (hz.txt)",
+      "status": "passed"
+    }
+  ],
+  "defect": {
+    "reproducer": "ros2 run patrol patrol при запущенном turtlesim — черепаха не двигается; ros2 topic info /cmd_vel --verbose: Publisher count 1 (patrol), Subscription count 0, у /turtle1/cmd_vel — подписчик turtlesim без издателя; позы pose-start.txt и pose-after-wrong.txt идентичны (x=5.544, theta=0.0).",
+    "root_cause": "Относительное имя cmd_vel разрешилось в namespace ноды в /cmd_vel. Связь издателя и подписчика в DDS строится по полному имени топика; /cmd_vel и /turtle1/cmd_vel — разные топики одного типа geometry_msgs/msg/Twist, поэтому публикация правильного типа с частотой 10 Гц никуда не доставляется.",
+    "proof_after": "ros2 run patrol patrol --ros-args -r cmd_vel:=/turtle1/cmd_vel (изменено только имя) — ros2 topic info /turtle1/cmd_vel --verbose показывает издателя patrol и подписчика turtlesim; поза меняется (pose-run1.txt x=4.93 -> pose-run2.txt x=3.91 за 3 с, скорости 0.5/0.3); ros2 topic hz /turtle1/cmd_vel = 10.000 Гц."
+  },
+  "claims": {
+    "public_tests_passed": true,
+    "defect_reproduced": true,
+    "defect_fixed": true
+  },
+  "time": {
+    "contact_academic_hours": 2,
+    "self_study_hours": 2
+  },
+  "ai_used": true
+}
